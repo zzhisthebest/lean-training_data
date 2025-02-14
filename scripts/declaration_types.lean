@@ -15,6 +15,7 @@ def Lean.ConstantInfo.kind : ConstantInfo → String
   | .recInfo    _ => "recursor"
 
 def main (args : List String) : IO UInt32 := do
+  unsafe enableInitializersExecution
   let modules := match args with
   | [] => #[`Mathlib]
   | args => args.toArray.map fun s => s.toName
