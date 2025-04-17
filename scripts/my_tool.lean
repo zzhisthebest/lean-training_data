@@ -5,25 +5,50 @@ import Mathlib.Lean.CoreM
 import Batteries.Data.String.Basic
 import Cli
 
-open Lean Elab IO Meta
+open Lean Elab IO Meta Tactic Term
 open Cli System
-
+#check Format
 namespace Lean.Elab.TacticInfo
 
-def verboseTrainingData (module : Name) (i : TacticInfo) (ctx : ContextInfo) : IO String := do
+--def foo1 (m : TacticM α) : IO α := TermElabM.withImportModules #[`Mathlib] <| m.run'
+def foo (m : MetaM α) : IO α := CoreM.withImportModules #[`Mathlib] <| m.run'
+
+
+
+def verboseTrainingData_1 (module : Name) (i : TacticInfo) (ctx : ContextInfo) : MetaM String := do
   let mut result := "===\n"
-  result := result ++ s!"{module}\n---\n"
   let sourceUpToTactic := Substring.mk (← moduleSource module) 0 (i.stx.getPos?.getD 0)
   let chunks := sourceUpToTactic.splitOn "\n\n"
-  let declUpToTactic := chunks.getLast!.toString
-  let offset := chunks.dropLast.foldl (init := 0) (fun t c => t + (c.toString.count '\n') + 2)
-  result := result ++ s!"{offset}\n---\n{declUpToTactic}\n---\n"
+  let goalstate_before:=← goalState i ctx
+  addSimpleHypothesisAndPrint i ctx
+  -- for x in goalstate_before do
+  --   IO.println ("x:",x)
+  -- let goalsBefore:=i.goalsBefore
+  -- let goalsAfter:=i.goalsAfter
+  -- -- for goal1 in goalsBefore do
+  -- --   for goal2 in goalsAfter do
+  -- --     let goal2_type ← goal2.getType
+  -- --     let p ← mkFreshExprMVar goal2_type MetavarKind.syntheticOpaque `h_100
+  -- --     goal1.withContext do
+  -- --       let (_, goal1New) ← MVarId.intro1P $ ← goal1.assert `h_100 goal2_type p
+  -- --       --replaceMainGoal [goal1New]
+  -- for x in goalsBefore do
+  --   IO.println ("x:",x)
+
+
+
+
+
+    --let goalFmt ← Meta.ppGoal goal
+    --IO.println s!"Goal ID: {goal.name}\nType: {goalType}\nContext:\n{goalFmt}\n"
+
   result := result ++ (Format.joinSep (← i.goalState ctx) "\n").pretty ++ "\n---\n"
-  let ⟨⟨startLine, startCol⟩, ⟨endLine, endCol⟩⟩ := i.range ctx
-  result := result ++ s!"{startLine}:{startCol}-{endLine}:{endCol}\n---\n"
   result := result ++ (← i.pp ctx).pretty ++ "\n---\n"
-  result := result ++ (Format.joinSep (← i.goalStateAfter ctx) "\n").pretty ++ "\n---\n"
+  result := result ++ (Format.joinSep (← i.goalStateAfter ctx) "\n").pretty ++ "\n"
   return result
+def verboseTrainingData (module : Name) (i : TacticInfo) (ctx : ContextInfo) : IO String := do
+  let s ← foo (verboseTrainingData_1 module i ctx)
+  return s
 
 def proofStepData (i : TacticInfo) (ctx : ContextInfo) : IO String := do
   return "[GOAL]\n" ++ (Format.joinSep (← i.goalState ctx) "\n").pretty ++ "\n[PROOFSTEP]\n" ++ (← i.pp ctx).pretty
@@ -46,10 +71,8 @@ def trainingData (args : Cli.Parsed) : IO UInt32 := do
     return 0
 
 /-- Setting up command line options and help text for `lake exe training_data`. -/
-def training_data : Cmd := `[Cli|
-  --指定了命令的名称 training_data，并且通过 VIA 将命令与 trainingData 这个函数进行关联。
-  --["0.0.1"]：这是命令的版本号。
-  training_data VIA trainingData; ["0.0.1"]
+def my_tool : Cmd := `[Cli|
+  my_tool VIA trainingData; ["0.0.1"]
 "Export training data consisting of goal states and tactic invocations from the given file.
 
 The output consists of blocks of the form:
@@ -109,6 +132,6 @@ Here:
 
 /-- `lake exe training_data` -/
 def main (args : List String) : IO UInt32 :=
-  training_data.validate args
+  my_tool.validate args
 
 -- See `scripts/training_data.sh` for a script to run this on all of Mathlib.

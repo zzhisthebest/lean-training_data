@@ -232,7 +232,7 @@ open System
 
 -- TODO allow finding Lean 4 sources from the toolchain.
 def findLean (mod : Name) : IO FilePath := do
-  return FilePath.mk ((← findOLean mod).toString.replace ".lake/build/lib/" "") |>.withExtension "lean"
+  return FilePath.mk ((← findOLean mod).toString.replace ".lake/build/lib/lean/" "") |>.withExtension "lean"
 
 /-- Implementation of `moduleSource`, which is the cached version of this function. -/
 def moduleSource' (mod : Name) : IO String := do
@@ -268,6 +268,8 @@ you should check all compiled files for error messages if attempting this.
 -/
 def compileModule (mod : Name) : IO (List CompilationStep) := do
   let m ← compilationCache.get
+
+
   match m[mod]? with
   | some r => return r
   | none => do

@@ -189,11 +189,14 @@ def pp (info : TacticInfo) (ctx : ContextInfo) : IO Format :=
 
 open Meta
 
-/-- Run a tactic on the goals stored in a `TacticInfo`. -/
+--己。
+/-- Run a tactic（即x） on the goals stored in a `TacticInfo`. -/
 def runMetaMGoalsBefore (info : TacticInfo) (ctx : ContextInfo) (x : List MVarId → MetaM α) : IO α := do
   ctx.runMetaM {} <| Meta.withMCtx info.mctxBefore <| x info.goalsBefore
 
-/-- Run a tactic on the after goals stored in a `TacticInfo`. -/
+
+--己。
+/-- Run a tactic（即x） on the after goals stored in a `TacticInfo`. -/
 def runMetaMGoalsAfter (info : TacticInfo) (ctx : ContextInfo) (x : List MVarId → MetaM α) : IO α := do
   ctx.runMetaM {} <| Meta.withMCtx info.mctxAfter <| x info.goalsAfter
 
@@ -209,11 +212,75 @@ def mainGoal (info : TacticInfo) (ctx : ContextInfo) : IO Expr :=
 def formatMainGoal (info : TacticInfo) (ctx : ContextInfo) : IO Format :=
   info.runMetaM ctx (fun g => do ppExpr (← instantiateMVars (← g.getType)))
 
+--己。
 def goalState (info : TacticInfo) (ctx : ContextInfo) : IO (List Format) := do
+  --其实就是在对应的环境里运行(fun gs => gs.mapM fun g => do Meta.ppGoal g)，gs对应
+  --的实参是info.goalsBefore
   info.runMetaMGoalsBefore ctx (fun gs => gs.mapM fun g => do Meta.ppGoal g)
 
+--己。
 def goalStateAfter (info : TacticInfo) (ctx : ContextInfo) : IO (List Format) := do
   info.runMetaMGoalsAfter ctx (fun gs => gs.mapM fun g => do Meta.ppGoal g)
+
+
+def addSimpleHypothesisAndPrint (info : TacticInfo) (ctx : ContextInfo) : IO Unit := do
+  info.runMetaMGoalsBefore ctx fun gsBefore =>
+    match gsBefore with
+    | [] => do IO.println "gsBefore has no goals!"
+    | _ :: _ :: _ => do IO.println "gsBefore has more than one goal!"
+    | [goal1] => do
+          let t←ctx.runMetaM {} <| Meta.withMCtx info.mctxAfter <| (
+            match info.goalsAfter with
+            | [] => do
+              IO.println "gsAfter has no goals!"
+              pure (mkConst ``Unit)  -- 返回Unit类型占位符
+            | _ :: _ :: _ => do  -- 列表包含多个元素
+              IO.println "gsAfter has more than one goal!"
+              pure (mkConst ``Unit)
+            | [goal2] => do  -- 只包含一个元素
+              -- let x←Meta.ppGoal goal2
+              -- IO.println x
+              let t ← goal2.getType
+              IO.println t
+              let t ← instantiateMVars t
+              IO.println t
+
+              pure t  -- 返回该元素的类型
+          )
+
+          -- 检查是否为Unit类型占位符
+          if (← Meta.isDefEq t (mkConst ``Unit)) then
+            --IO.println "zzh2"
+            return  -- 提前结束函数
+          else
+            --IO.println "zzh3"
+            let p ← mkFreshExprMVar t MetavarKind.syntheticOpaque `h_1
+            IO.println p
+            goal1.withContext do
+              let (_, goal1) ← MVarId.intro1P $ ← goal1.assert `h_1 t p
+              let x←Meta.ppGoal goal1
+              IO.println x
+              -- let (_, g) ← goal1.revert (clearAuxDeclsInsteadOfRevert := true) (← goal1.getDecl).lctx.getFVarIds
+              -- let ty ← instantiateMVars (← g.getType)
+              -- if ty.hasExprMVar then
+              --   throwError "Extracted goal has metavariables: {ty}"
+              -- let ty ← Term.levelMVarToParam ty
+              -- let seenLevels := collectLevelParams {} ty
+              -- let levels := (← Term.getLevelNames).filter
+              --         fun u => seenLevels.visitedLevel.contains (.param u)
+              --  -- 动态生成唯一名称
+              -- let name ← mkAuxName ((← getCurrNamespace) ++ `extracted) 1
+              -- addAndCompile <| Declaration.axiomDecl
+              --   { name := name
+              --     levelParams := levels
+              --     isUnsafe := false
+              --     type := ty }
+              -- let sig ← addMessageContext <| MessageData.signature name
+              -- let cmd := if ← Meta.isProp ty then "theorem" else "def"
+              -- let sig←sig.toString
+              -- IO.println (s!"{cmd} {sig} := sorry")
+
+
 
 def ppExpr (info : TacticInfo) (ctx : ContextInfo) (e : Expr) : IO Format :=
   info.runMetaM ctx (fun _ => do Meta.ppExpr (← instantiateMVars e))

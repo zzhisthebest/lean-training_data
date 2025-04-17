@@ -106,6 +106,7 @@ def main (args : List String) : IO UInt32 := do
   let modules := match args with
   | [] => #[`Mathlib]
   | args => args.toArray.map fun s => s.toName
+  --IO.println s!"  modules:{modules}"
   initSearchPath (← findSysroot)
   CoreM.withImportModules modules (options := options) do
     let allConstants ← allUsedConstants

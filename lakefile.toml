@@ -4,7 +4,12 @@ defaultTargets = ["TrainingData", "Examples", "tactic_benchmark", "export_infotr
 [[require]]
 name = "mathlib"
 git = "https://github.com/leanprover-community/mathlib4.git"
-rev = "v4.16.0"
+rev = "v4.18.0"
+
+[[require]]
+name = "FoML"
+git = "https://github.com/auto-res/lean-rademacher.git"
+rev = "main"
 
 [[lean_lib]]
 name = "TrainingData"
@@ -28,6 +33,11 @@ root = "scripts.training_data"
 supportInterpreter = true
 
 [[lean_exe]]
+name = "my_tool"
+root = "scripts.my_tool"
+supportInterpreter = true
+
+[[lean_exe]]
 name = "comment_data"
 root = "scripts.comment_data"
 supportInterpreter = true
@@ -35,10 +45,12 @@ supportInterpreter = true
 [[lean_exe]]
 name = "premises"
 root = "scripts.premises"
+supportInterpreter = true
 
 [[lean_exe]]
 name = "declaration_types"
 root = "scripts.declaration_types"
+supportInterpreter = true
 
 [[lean_exe]]
 name = "goal_comments"

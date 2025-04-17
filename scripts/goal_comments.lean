@@ -63,7 +63,9 @@ def String.indent (s : String) (k : Nat) : String := ⟨List.replicate k ' '⟩ 
 def goalComments (args : Cli.Parsed) : IO UInt32 := do
     initSearchPath (← findSysroot)
     let module := args.positionalArg! "module" |>.as! ModuleName
+    IO.println s!"← findOLean module: {← findOLean module}"
     let mut trees ← moduleInfoTrees module
+    IO.println s!"hello"
     trees := trees.flatMap InfoTree.retainTacticInfo
     trees := trees.flatMap InfoTree.retainOriginal
     trees := trees.flatMap InfoTree.retainSubstantive
@@ -71,9 +73,10 @@ def goalComments (args : Cli.Parsed) : IO UInt32 := do
     let L₂ := dropEnclosed L₁ |>.filter fun ⟨⟨⟨l₁, _⟩, ⟨l₂, _⟩⟩, _⟩  => l₁ = l₂
     let L₃ := (L₂.map fun ⟨r, s⟩ => (r, justTheGoal s)) |>.filter fun ⟨_, s⟩ => s != ""
     let mut src := (← moduleSource module).splitOn "\n"
+    --IO.println s!"src: {src}"
     for ⟨⟨⟨l, c⟩, _⟩, s⟩ in L₃.reverse do
       let toInsert := ("-- " ++ s).indent c
-      if src.get? l ≠ toInsert then
+      if src[l]? ≠ toInsert then
         src := src.insertIdx l toInsert
     let out := ("\n".intercalate src)
     if args.hasFlag "edit" then
