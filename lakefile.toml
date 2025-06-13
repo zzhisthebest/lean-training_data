@@ -8,7 +8,12 @@ rev = "v4.18.0"
 
 [[require]]
 name = "FoML"
-git = "https://github.com/auto-res/lean-rademacher.git"
+git = "https://github.com/njuyxw/lean-rademacher"
+rev = "lizn_dev"
+
+[[require]]
+name = "optlib"
+git = "https://github.com/Lizn-zn/optlib"
 rev = "main"
 
 [[lean_lib]]
