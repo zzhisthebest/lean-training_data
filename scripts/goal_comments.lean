@@ -38,6 +38,10 @@ namespace Lean.Elab.TacticInfo
 def rangesAndGoals (i : TacticInfo) (ctx : ContextInfo) : IO (Range × String) := do
   return ⟨i.range ctx, (Format.joinSep (← i.goalStateAfter ctx) "\n").pretty 1000000⟩
 
+def rangesAndTactics (i : TacticInfo) (ctx : ContextInfo) : IO (Range × Format) := do
+  let tactic←i.pp ctx
+  return  ⟨i.range ctx, tactic⟩
+
 end Lean.Elab.TacticInfo
 
 partial def dropEnclosed (L : List (Range × String)) : List (Range × String) :=
@@ -63,25 +67,34 @@ def String.indent (s : String) (k : Nat) : String := ⟨List.replicate k ' '⟩ 
 def goalComments (args : Cli.Parsed) : IO UInt32 := do
     initSearchPath (← findSysroot)
     let module := args.positionalArg! "module" |>.as! ModuleName
-    IO.println s!"← findOLean module: {← findOLean module}"
     let mut trees ← moduleInfoTrees module
-    IO.println s!"hello"
     trees := trees.flatMap InfoTree.retainTacticInfo
     trees := trees.flatMap InfoTree.retainOriginal
     trees := trees.flatMap InfoTree.retainSubstantive
     let L₁ ← (trees.flatMap InfoTree.tactics).mapM fun ⟨i, c⟩ => i.rangesAndGoals c
     let L₂ := dropEnclosed L₁ |>.filter fun ⟨⟨⟨l₁, _⟩, ⟨l₂, _⟩⟩, _⟩  => l₁ = l₂
     let L₃ := (L₂.map fun ⟨r, s⟩ => (r, justTheGoal s)) |>.filter fun ⟨_, s⟩ => s != ""
-    let mut src := (← moduleSource module).splitOn "\n"
-    --IO.println s!"src: {src}"
-    for ⟨⟨⟨l, c⟩, _⟩, s⟩ in L₃.reverse do
-      let toInsert := ("-- " ++ s).indent c
-      if src[l]? ≠ toInsert then
-        src := src.insertIdx l toInsert
-    let out := ("\n".intercalate src)
-    if args.hasFlag "edit" then
-      IO.FS.writeFile (← findLean module) out
-    IO.println out
+    let my_l1  ← (trees.flatMap InfoTree.rootTactics).mapM fun ⟨i, c⟩ => i.rangesAndTactics c
+    --let my_l := dropEnclosed my_l1  -- 仅剔除嵌套策略
+
+    for ⟨range, tactic⟩ in my_l1 do
+      let ⟨startPos, endPos⟩ := range
+      let ⟨startLine, startCol⟩ := startPos
+      let ⟨endLine, endCol⟩ := endPos
+      IO.println s!"范围: 行 {startLine} 列 {startCol} 到 行 {endLine} 列 {endCol}"
+      IO.println s!"tactic: {tactic}"
+      IO.println "------"
+
+    -- let mut src := (← moduleSource module).splitOn "\n"
+    -- --IO.println s!"src: {src}"
+    -- for ⟨⟨⟨l, c⟩, _⟩, s⟩ in my_l.reverse do
+    --   let toInsert := ("-- " ++ s).indent c
+    --   if src[l]? ≠ toInsert then
+    --     src := src.insertIdx l "----------------------------"
+    -- let out := ("\n".intercalate src)
+    -- if args.hasFlag "edit" then
+    --   IO.FS.writeFile (← findLean module) out
+    -- IO.println out
     return 0
 
 /-- Setting up command line options and help text for `lake exe goal_comments`. -/

@@ -37,6 +37,7 @@ def trainingData (args : Cli.Parsed) : IO UInt32 := do
     trees := trees.flatMap InfoTree.retainTacticInfo
     trees := trees.flatMap InfoTree.retainOriginal
     trees := trees.flatMap InfoTree.retainSubstantive
+    IO.println s!"语法树数量: {trees.length}"
     for t in trees do
       for (i, ctx) in t.tactics do
         if args.hasFlag "proofstep" then

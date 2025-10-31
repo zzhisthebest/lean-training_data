@@ -60,3 +60,4 @@ supportInterpreter = true
 [[lean_exe]]
 name = "goal_comments"
 root = "scripts.goal_comments"
+supportInterpreter = true

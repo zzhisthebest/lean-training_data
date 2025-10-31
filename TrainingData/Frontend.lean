@@ -163,6 +163,26 @@ def newDecls (cmd : CompilationStep) : IO (List DeclInfo) := do
       docString := ← findDocString? cmd.after ci.name
     }
 
+def newDeclsOfTheoremOrLemmaKind (cmd : CompilationStep) : IO (List DeclInfo) := do
+  cmd.diff.filterMapM fun ci => cmd.runMetaMBefore do
+    if ← isBlackListed ci.name then
+      pure none
+    else if !ci.isTheorem then--滤去非定理类型的declarations
+      pure none
+    else pure <| some {
+      name := ci.name
+      type := ci.type
+      ppType := toString (← Meta.ppExpr ci.type)
+      docString := ← findDocString? cmd.after ci.name
+    }
+
+def newDecls2 (cmd : CompilationStep) : IO (List ConstantInfo) := do
+  cmd.diff.filterMapM fun ci => cmd.runMetaMBefore do
+    if ← isBlackListed ci.name then
+      pure none
+    else pure <| some ci
+
+
 end CompilationStep
 
 /--
@@ -260,7 +280,7 @@ initialize compilationCache : IO.Ref <| Std.HashMap Name (List CompilationStep) 
 
 /--
 Compile the source file for the named module, returning the
-resulting environment, any generated messages, and all info trees.
+resulting environment, any generated messages, and all infotrees.
 
 The results are cached, although be aware that compiling multiple files in the same session
 is unsupported, and may lead to exciting results:
